@@ -39,13 +39,19 @@ jobs:
 
       - name: Normalize app metadata
         id: normalize
+        env:
+          APP_IMAGE: ${{ steps.info.outputs.image }}
+          APP_NAME: ${{ steps.info.outputs.name }}
+          APP_DESCRIPTION: ${{ steps.info.outputs.description }}
+          APP_URL: ${{ steps.info.outputs.url }}
+          APP_VERSION: ${{ steps.info.outputs.version }}
         shell: bash
         run: |
-          image="${{ steps.info.outputs.image }}"
-          name="${{ steps.info.outputs.name }}"
-          description="${{ steps.info.outputs.description }}"
-          url="${{ steps.info.outputs.url }}"
-          version="${{ steps.info.outputs.version }}"
+          image="${APP_IMAGE//\"/}"
+          name="${APP_NAME//\"/}"
+          description="${APP_DESCRIPTION//\"/}"
+          url="${APP_URL//\"/}"
+          version="${APP_VERSION//\"/}"
           {
             echo "image_name=${image##*/}"
             echo "registry_prefix=${image%/*}"
