@@ -1,3 +1,8 @@
+## 0.1.2
+
+- Add a browser UUID fallback for Home Assistant HTTP ingress origins that do
+  not expose `crypto.randomUUID()`.
+
 ## 0.1.1
 
 - Aggregate app logs with `[component]` prefixes for ingress, backend,

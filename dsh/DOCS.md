@@ -4,6 +4,10 @@
 
 Open the app from Home Assistant. It is served through Home Assistant ingress and does not require a host port or a separate reverse proxy.
 
+The frontend keeps using `crypto.randomUUID()` when the browser provides it and
+falls back to `crypto.getRandomValues()` for HTTP hostnames that are not treated
+as secure contexts, such as a typical `homeassistant.local` URL.
+
 ## Persistent data
 
 - `/data/dsh` stores DeepSeek Harness state and configuration.

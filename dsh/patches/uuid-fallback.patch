@@ -1,0 +1,42 @@
+diff --git a/packages/host/apiproxy/src/fetch/client.ts b/packages/host/apiproxy/src/fetch/client.ts
+--- a/packages/host/apiproxy/src/fetch/client.ts
++++ b/packages/host/apiproxy/src/fetch/client.ts
+@@ -298,4 +298,10 @@ export abstract class AbstractApiClient implements IApiClient {
+   protected mintRpcId(): RpcId {
+-    // crypto.randomUUID is a Web API (browser + Node ≥19): keeps this base platform-neutral.
+-    return RpcId(crypto.randomUUID())
++    const cryptoApi = globalThis.crypto
++    if (typeof cryptoApi.randomUUID === 'function') return RpcId(cryptoApi.randomUUID())
++    const bytes = cryptoApi.getRandomValues(new Uint8Array(16))
++    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
++    view.setUint8(6, (view.getUint8(6) & 0x0f) | 0x40)
++    view.setUint8(8, (view.getUint8(8) & 0x3f) | 0x80)
++    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
++    return RpcId(`${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`)
+   }
+diff --git a/packages/client/ui-conversation/src/client/service.ts b/packages/client/ui-conversation/src/client/service.ts
+--- a/packages/client/ui-conversation/src/client/service.ts
++++ b/packages/client/ui-conversation/src/client/service.ts
+@@ -61,8 +61,20 @@ export interface IConversation {
++/** Browser-safe UUID generation for image drafts on non-secure HTTP origins. */
++function browserRandomUuid(): string {
++  const cryptoApi = globalThis.crypto
++  if (typeof cryptoApi.randomUUID === 'function') return cryptoApi.randomUUID()
++  const bytes = cryptoApi.getRandomValues(new Uint8Array(16))
++  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
++  view.setUint8(6, (view.getUint8(6) & 0x0f) | 0x40)
++  view.setUint8(8, (view.getUint8(8) & 0x3f) | 0x80)
++  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
++  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
++}
++
+ /** Create one browser-only draft descriptor; only its id enters input state. */
+ function browserDraftAttachment(file: File): ComposerAttachment {
+   return {
+     kind: 'image',
+-    id: crypto.randomUUID() as DraftAttachmentId,
++    id: browserRandomUuid() as DraftAttachmentId,
+     previewUrl: URL.createObjectURL(file),
+     file,
+   }
+ }

@@ -7,9 +7,11 @@ RUN apt-get update \
 WORKDIR /opt/deepseek-harness
 COPY deepseek-harness/ ./
 COPY patches/ha-ingress.patch /tmp/ha-ingress.patch
+COPY patches/uuid-fallback.patch /tmp/uuid-fallback.patch
 
 RUN git apply --unidiff-zero --whitespace=nowarn /tmp/ha-ingress.patch \
-    && rm /tmp/ha-ingress.patch
+    && git apply --unidiff-zero --whitespace=nowarn /tmp/uuid-fallback.patch \
+    && rm /tmp/ha-ingress.patch /tmp/uuid-fallback.patch
 
 RUN corepack enable \
     && corepack prepare pnpm@11.7.0 --activate \
