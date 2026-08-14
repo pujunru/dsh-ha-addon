@@ -1,0 +1,8 @@
+# Keep DSH's web service quiet inside the add-on. The wrapper proxy exposes it
+# through Home Assistant ingress and rewrites the incoming authority to the
+# loopback backend, so DSH's host-trust fence remains enabled.
+- id: web-runtime
+  config:
+    printUrl: false
+    surfaceContext: false
+    trustedHosts: []

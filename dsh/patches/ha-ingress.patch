@@ -1,0 +1,81 @@
+diff --git a/apps/web/index.html b/apps/web/index.html
+index a14de72d40..3d310f656e 100644
+--- a/apps/web/index.html
++++ b/apps/web/index.html
+@@ -6,2 +6,3 @@
+-    <link rel="manifest" href="/manifest.webmanifest" />
+-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
++    <base href="./" />
++    <link rel="manifest" href="./manifest.webmanifest" />
++    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+@@ -12 +13 @@
+-    <script type="module" src="/src/main.ts"></script>
++    <script type="module" src="./src/main.ts"></script>
+diff --git a/apps/web/vite.config.ts b/apps/web/vite.config.ts
+index 7b9ef7a15b..215e54dc4a 100644
+--- a/apps/web/vite.config.ts
++++ b/apps/web/vite.config.ts
+@@ -92,0 +93 @@ export default defineConfig({
++  base: './',
+diff --git a/packages/client/connection/src/client/rpc.ts b/packages/client/connection/src/client/rpc.ts
+index f8bacb1553..f3f58ac5cf 100644
+--- a/packages/client/connection/src/client/rpc.ts
++++ b/packages/client/connection/src/client/rpc.ts
+@@ -31 +31 @@ export function createWebConnectionRpc(): ClientConnectionRpc {
+-        new URL(`${channel}/${endpoint}`, resolveBase()),
++        new URL(`${channel}/${endpoint}`.replace(/^\/+/, ''), resolveBase()),
+@@ -52,2 +52,10 @@ function resolveBase(): string {
+-  const location = (globalThis as { location?: { origin?: string } }).location
+-  return location?.origin !== undefined && location.origin !== 'null' ? location.origin : INTERNAL_BASE
++  const browser = globalThis as {
++    location?: { origin?: string; pathname?: string }
++    document?: { baseURI?: string }
++  }
++  const documentBase = browser.document?.baseURI
++  if (documentBase !== undefined && documentBase !== 'about:blank') return documentBase
++  const location = browser.location
++  if (location?.origin === undefined || location.origin === 'null') return INTERNAL_BASE
++  const pathname = location.pathname ?? '/'
++  return `${location.origin}${pathname.endsWith('/') ? pathname : `${pathname}/`}`
+diff --git a/packages/client/connection/src/client/web-api-client.ts b/packages/client/connection/src/client/web-api-client.ts
+index a2c2d95b7b..ea0400dacc 100644
+--- a/packages/client/connection/src/client/web-api-client.ts
++++ b/packages/client/connection/src/client/web-api-client.ts
+@@ -40 +40 @@ export class WebApiClient extends AbstractApiClient {
+-    const url = new URL(path, this.resolveBase())
++    const url = new URL(path.replace(/^\/+/, ''), this.resolveBase())
+diff --git a/packages/client/modules/src/index.ts b/packages/client/modules/src/index.ts
+index aa0ff5d59d..eb23b98381 100644
+--- a/packages/client/modules/src/index.ts
++++ b/packages/client/modules/src/index.ts
+@@ -153 +153 @@ function graphRow(id: string, rev: string, injectEdges: string[] | undefined, im
+-    url: `/plugins/${id}/client.js?rev=${rev}`,
++    url: `plugins/${id}/client.js?rev=${rev}`,
+diff --git a/packages/host/apiproxy/src/fetch/client.ts b/packages/host/apiproxy/src/fetch/client.ts
+index 70e3ece58f..7dec1eb23d 100644
+--- a/packages/host/apiproxy/src/fetch/client.ts
++++ b/packages/host/apiproxy/src/fetch/client.ts
+@@ -294,2 +294,15 @@ export abstract class AbstractApiClient implements IApiClient {
+-    const loc = (globalThis as { location?: { origin?: string } }).location
+-    return loc?.origin !== undefined && loc.origin !== 'null' ? loc.origin : INTERNAL_BASE
++    const browser = globalThis as {
++      location?: { origin?: string; pathname?: string }
++      document?: { baseURI?: string }
++    }
++    const documentBase = browser.document?.baseURI
++    if (documentBase !== undefined && documentBase !== 'about:blank') return documentBase
++    const loc = browser.location
++    if (loc?.origin === undefined || loc.origin === 'null') return INTERNAL_BASE
++    const pathname = loc.pathname ?? '/'
++    return `${loc.origin}${pathname.endsWith('/') ? pathname : `${pathname}/`}`
++  }
++
++  /** Resolve API paths beneath the current document so Home Assistant ingress prefixes survive. */
++  protected resolvePath(path: string): URL {
++    return new URL(path.replace(/^\/+/, ''), this.resolveBase())
+@@ -318 +331 @@ export abstract class AbstractApiClient implements IApiClient {
+-    const response = await this.doFetch(new URL(path, this.resolveBase()), {
++    const response = await this.doFetch(this.resolvePath(path), {
+@@ -375 +388 @@ export abstract class AbstractApiClient implements IApiClient {
+-    const response = await this.doFetch(new URL(path, this.resolveBase()), { signal })
++    const response = await this.doFetch(this.resolvePath(path), { signal })

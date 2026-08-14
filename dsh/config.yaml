@@ -1,0 +1,16 @@
+name: DeepSeek Harness
+version: "0.1.0"
+slug: deepseek_harness
+description: Run DeepSeek Harness in Home Assistant.
+url: https://github.com/pujunru/dsh-ha-addon/tree/main/dsh
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: application
+boot: auto
+ingress: true
+ingress_port: 3080
+panel_icon: mdi:robot
+panel_title: DeepSeek Harness
+image: ghcr.io/pujunru/dsh-ha-addon

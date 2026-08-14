@@ -1,0 +1,4 @@
+deepseek-harness/.git
+deepseek-harness/node_modules
+deepseek-harness/**/node_modules
+deepseek-harness/.pnpm-store
