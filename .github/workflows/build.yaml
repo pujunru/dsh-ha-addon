@@ -94,7 +94,9 @@ jobs:
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
           context: ./${{ env.APP_PATH }}
           image: ${{ matrix.image }}
-          image-tags: ${{ needs.prepare.outputs.version }} latest
+          image-tags: |
+            ${{ needs.prepare.outputs.version }}
+            latest
           labels: |
             io.hass.type=app
             io.hass.name=${{ needs.prepare.outputs.name }}
@@ -119,5 +121,7 @@ jobs:
           architectures: ${{ needs.prepare.outputs.architectures }}
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
           image-name: ${{ needs.prepare.outputs.image_name }}
-          image-tags: ${{ needs.prepare.outputs.version }} latest
+          image-tags: |
+            ${{ needs.prepare.outputs.version }}
+            latest
           registry-prefix: ${{ needs.prepare.outputs.registry_prefix }}
