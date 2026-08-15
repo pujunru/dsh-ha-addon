@@ -8,6 +8,13 @@ The frontend keeps using `crypto.randomUUID()` when the browser provides it and
 falls back to `crypto.getRandomValues()` for HTTP hostnames that are not treated
 as secure contexts, such as a typical `homeassistant.local` URL.
 
+## Ingress paths
+
+Home Assistant sends the public ingress prefix in `X-Ingress-Path`. The wrapper
+uses that header to rewrite the returned HTML `<base>` URL, so frontend API,
+WebSocket, plugin, and HMR requests stay under the same ingress session. No
+additional Nginx reverse proxy is required.
+
 ## Persistent data
 
 - `/data/dsh` stores DeepSeek Harness state and configuration.
