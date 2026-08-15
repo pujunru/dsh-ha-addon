@@ -58,6 +58,27 @@ const safePath = (url) => {
   }
 }
 
+const ingressBasePath = (headers) => {
+  const raw = headers['x-ingress-path']
+  const value = Array.isArray(raw) ? raw[0] : raw
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return undefined
+  const path = value.split(/[?#]/, 1)[0].replace(/\/+$/, '')
+  return path === '' ? '/' : `${path}/`
+}
+
+const escapeHtmlAttribute = (value) => value
+  .replaceAll('&', '&amp;')
+  .replaceAll('"', '&quot;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+
+const rewriteIngressBase = (body, basePath) => {
+  const html = body.toString('utf8')
+  const base = `<base href="${escapeHtmlAttribute(basePath)}">`
+  if (/<base\b[^>]*>/i.test(html)) return html.replace(/<base\b[^>]*>/i, base)
+  return html.replace(/<head\b[^>]*>/i, match => `${match}${base}`)
+}
+
 const nextRequestId = (() => {
   let value = 0
   return () => String(++value)
@@ -79,6 +100,7 @@ const proxyHeaders = (headers) => {
   delete forwarded['sec-fetch-site']
   delete forwarded['x-forwarded-host']
   delete forwarded['x-forwarded-proto']
+  forwarded['accept-encoding'] = 'identity'
   forwarded.host = `${BACKEND_HOST}:${BACKEND_PORT}`
   return forwarded
 }
@@ -87,11 +109,13 @@ const server = http.createServer((request, response) => {
   const requestId = nextRequestId()
   const startedAt = Date.now()
   const path = safePath(request.url)
+  const basePath = ingressBasePath(request.headers)
 
   log('ingress', 'info', 'http request', {
     requestId,
     method: request.method,
     path,
+    ...(basePath === undefined ? {} : { ingressPath: basePath }),
   })
 
   let completed = false
@@ -104,6 +128,7 @@ const server = http.createServer((request, response) => {
       path,
       status,
       durationMs: Date.now() - startedAt,
+      ...(basePath === undefined ? {} : { ingressPath: basePath }),
     })
   }
 
@@ -119,6 +144,26 @@ const server = http.createServer((request, response) => {
     path: request.url,
     headers: proxyHeaders(request.headers),
   }, (upstreamResponse) => {
+    const contentType = upstreamResponse.headers['content-type']
+    const rewriteHtml = request.method !== 'HEAD'
+      && basePath !== undefined
+      && typeof contentType === 'string'
+      && contentType.toLowerCase().includes('text/html')
+    if (rewriteHtml) {
+      const chunks = []
+      upstreamResponse.on('data', chunk => chunks.push(chunk))
+      upstreamResponse.on('end', () => {
+        const headers = { ...upstreamResponse.headers }
+        delete headers['content-length']
+        delete headers['content-encoding']
+        delete headers.etag
+        headers['cache-control'] = 'no-store'
+        response.writeHead(upstreamResponse.statusCode ?? 502, headers)
+        response.end(rewriteIngressBase(Buffer.concat(chunks), basePath))
+      })
+      upstreamResponse.on('error', error => response.destroy(error))
+      return
+    }
     response.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers)
     upstreamResponse.pipe(response)
   })

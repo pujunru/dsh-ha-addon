@@ -1,3 +1,10 @@
+## 0.1.3
+
+- Make Home Assistant ingress paths available to the browser through the
+  `X-Ingress-Path` header and rewrite the frontend base URL accordingly.
+- Keep HMR, API, WebSocket, plugin, and session-export requests under the
+  ingress prefix without requiring an additional Nginx proxy.
+
 ## 0.1.2
 
 - Add a browser UUID fallback for Home Assistant HTTP ingress origins that do

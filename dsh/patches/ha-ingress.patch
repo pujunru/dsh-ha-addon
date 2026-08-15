@@ -79,3 +79,29 @@ index 70e3ece58f..7dec1eb23d 100644
 @@ -375 +388 @@ export abstract class AbstractApiClient implements IApiClient {
 -    const response = await this.doFetch(new URL(path, this.resolveBase()), { signal })
 +    const response = await this.doFetch(this.resolvePath(path), { signal })
++
+diff --git a/packages/client/hmr/src/client/index.ts b/packages/client/hmr/src/client/index.ts
+--- a/packages/client/hmr/src/client/index.ts
++++ b/packages/client/hmr/src/client/index.ts
+@@ -167 +167 @@
+-    const source = new EventSource(EVENTS_ENDPOINT)
++    const source = new EventSource(new URL(EVENTS_ENDPOINT.replace(/^\/+/, ''), document.baseURI).toString())
++
+diff --git a/packages/session-query/session-log-export/src/client/controller.ts b/packages/session-query/session-log-export/src/client/controller.ts
+--- a/packages/session-query/session-log-export/src/client/controller.ts
++++ b/packages/session-query/session-log-export/src/client/controller.ts
+@@ -47,4 +47,10 @@
+ function hostBase(): string {
+-  const origin = (globalThis as { location?: { origin?: string } }).location?.origin
++  const browser = globalThis as {
++    location?: { origin?: string }
++    document?: { baseURI?: string }
++  }
++  const documentBase = browser.document?.baseURI
++  if (documentBase !== undefined && documentBase !== 'about:blank') return documentBase
++  const origin = browser.location?.origin
+   return origin !== undefined && origin !== 'null' ? origin : 'http://dsh.internal'
+ }
+@@ -114 +114 @@
+-      const url = new URL('/api/session.export', hostBase())
++      const url = new URL('api/session.export', hostBase())
